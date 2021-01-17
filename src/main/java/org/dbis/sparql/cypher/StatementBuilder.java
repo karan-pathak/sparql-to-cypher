@@ -20,7 +20,7 @@ public class StatementBuilder {
                 ? node_obj.getLiteralValue().toString()
                 : node_obj.getName();
         var object_node = Cypher.anyNode(obj);
-        final String predicate = triple.getPredicate().getURI();
+        final String predicate = Prefixes.getURIValue(triple.getPredicate().getURI());
         var statement = Cypher
                 .match(subject_node.relationshipTo(object_node, predicate))
                 .returning(subj, obj)

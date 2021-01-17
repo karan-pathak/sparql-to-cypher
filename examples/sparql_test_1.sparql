@@ -1,0 +1,4 @@
+select *
+where {
+      ?person v:ACTED_IN ?movie .
+}

@@ -6,7 +6,8 @@ import java.util.List;
 
 public class Prefixes {
 
-    public final static String BASE_URI = "http://northwind.com/model/";
+//    public final static String BASE_URI = "http://northwind.com/model/";
+    public final static String BASE_URI = "";
 
     final static List<String> PREFIXES = Arrays.asList("edge", "property", "value");
 

@@ -39,7 +39,7 @@ public class QueryExecuter {
 
         // TODO: Remove dummy queries
         try ( Transaction tx = graphDb.beginTx();
-               Result result = tx.execute( "MATCH (n {name: 'Keanu Reeves'}) RETURN n, n.name" ) ){
+               Result result = tx.execute( cypherRenderer.render(cypherStatements.get(0)) ) ){
             String resultString;
             String columnsString;
             String renderedCS;
@@ -48,7 +48,7 @@ public class QueryExecuter {
 
             // tag::items[]
             Iterator<Node> n_column = result.columnAs( "n" );
-            n_column.forEachRemaining( node -> nodeResult = node + ": " + node.getProperty( "name" ) );
+            n_column.forEachRemaining( node -> nodeResult = node + ": " );
             // end::items[]
 
             // tag::columns[]
@@ -59,8 +59,6 @@ public class QueryExecuter {
                 resultString = tx.execute(cypherRenderer.render(cs)).resultAsString();
                 System.out.println(resultString);
             }
-            resultString = tx.execute( "MATCH (n {name: 'Keanu Reeves'}) RETURN n, n.name" ).resultAsString();
-            System.out.println(resultString);
         }
 
         managementService.shutdown();
