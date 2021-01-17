@@ -1,0 +1,2 @@
+# Configuration values for sparql to cypher project
+DB_URL=/Users/<User>/Library/Application Support/com.Neo4j.Relate/Data/dbmss/dbms-<identifier>

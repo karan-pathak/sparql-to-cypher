@@ -1,0 +1,4 @@
+select *
+where {
+      ?a v:name ?name .
+}
