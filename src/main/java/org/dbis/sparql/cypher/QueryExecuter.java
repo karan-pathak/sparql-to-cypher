@@ -58,6 +58,7 @@ public class QueryExecuter {
             for(Statement cs: cypherStatements){
                 resultString = tx.execute(cypherRenderer.render(cs)).resultAsString();
                 System.out.println(resultString);
+                System.out.println("The resulting cypher code is : "+cypherRenderer.render(cs));
             }
         }
 

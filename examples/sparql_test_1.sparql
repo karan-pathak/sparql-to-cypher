@@ -1,4 +1,4 @@
-select *
+select ?person ?movie
 where {
       ?person v:ACTED_IN ?movie .
 }
