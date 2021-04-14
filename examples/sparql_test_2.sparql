@@ -1,0 +1,4 @@
+select ?person ?movie
+where {
+      ?person ?h ?movie .
+}

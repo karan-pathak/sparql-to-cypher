@@ -1,10 +1,12 @@
 package org.dbis.sparql.cypher;
 
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
 import org.apache.jena.query.Query;
 import org.apache.jena.query.QueryFactory;
@@ -17,22 +19,30 @@ import org.apache.jena.sparql.algebra.op.OpBGP;
 import org.apache.jena.sparql.algebra.op.OpFilter;
 import org.apache.jena.sparql.algebra.op.OpLeftJoin;
 import org.apache.jena.sparql.algebra.op.OpUnion;
+import org.apache.jena.sparql.core.Var;
 import org.apache.jena.sparql.expr.Expr;
 
+import org.neo4j.cypherdsl.core.Cypher;
+import org.neo4j.cypherdsl.core.Literal;
 import org.neo4j.cypherdsl.core.Statement;
+import org.neo4j.cypherdsl.core.StatementBuilder;
 
 public class SparqlToCypherCompiler extends OpVisitorBase{
     List<Statement> statementList = new ArrayList<Statement>();
+    List<String> varsToReturn = new ArrayList<>();
+    // Referenced java doc: https://neo4j-contrib.github.io/cypher-dsl/current/project-info/apidocs/org/neo4j/cypherdsl/core/package-summary.html
+    StatementBuilder.OrderableOngoingReadingAndWith statement_rw;
+    StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere statement_rww;
 
     List<Statement> convertToCypherStatements(final Query query) {
 
         long startTime = System.currentTimeMillis();
         long endTime;
         final Op op = Algebra.compile(query); // SPARQL query compiles here to
-        // OP
-        // System.out.println("OP Tree: " + op.toString());
-
-        OpWalker.walk(op, this); // OP is being walked here
+        for(Var projVar: query.getProjectVars()){
+            varsToReturn.add(projVar.getName());
+        }
+        OpWalker.walk(op, this); // OP is being walked here. This calls the visit method
         return statementList;
     }
 
@@ -42,24 +52,118 @@ public class SparqlToCypherCompiler extends OpVisitorBase{
 
     public static List<Statement> convert(final String query){
         return convert(QueryFactory.create(Prefixes.prepend(query)));
+        // Can be used for variable predicate in future. Commented below.
+        // return convert(QueryFactory.create(query));
     }
 
     @Override
     public void visit(final OpBGP opBGP) {
-        {
+        System.out.println("################ Inside opBGP ####################");
+        final List<Triple> triples = opBGP.getPattern().getList();
+        int count = 1;
+        for (final Triple triple : triples) {
+            final String subj = triple.getSubject().getName(); // Change this. It can also be variable
+            final Node node_obj = triple.getObject();
+            String obj = node_obj.isConcrete()
+                    ? node_obj.getLiteralValue().toString()
+                    : node_obj.getName();
+            final Node predicate = triple.getPredicate();
+            final String uri = predicate.getURI();
+            final String uriValue = Prefixes.getURIValue(uri);
+            final String prefix = Prefixes.getPrefix(uri);
+            var subject_node = Cypher.anyNode(subj);
 
-            System.out.println("Inside opBGP ---------------------------------------------->");
-            final List<Triple> triples = opBGP.getPattern().getList();
-            final Statement[] matchStatements = new Statement[triples.size()];
-            int i = 0;
-            for (final Triple triple : triples) {
+            switch(prefix){
+                case "edge":
+                    var object_node = Cypher.anyNode(obj);
+                    if(statement_rw != null && statement_rww == null){
+                        statement_rw = statement_rw
+                                .match(subject_node.relationshipTo(object_node, uriValue))
+                                .with(subj, obj);
+                    }
+                    else if(statement_rww != null){
+                        statement_rww = statement_rww
+                                .match(subject_node.relationshipTo(object_node, uriValue))
+                                .with(subj, obj);
+                    }
+                    else{
+                        statement_rw = Cypher
+                                .match(subject_node.relationshipTo(object_node, uriValue))
+                                .with(subj, obj);
+                    }
+                    break;
+                case "value":
+                    subject_node = Cypher.node(uriValue);
+                    if(statement_rw != null && statement_rww == null){
+                        statement_rw = statement_rw
+                                .match(subject_node)
+                                .with(subj);
+                    }
+                    else if(statement_rww != null){
+                        statement_rww = statement_rww
+                                .match(subject_node)
+                                .with(subj);
+                    }
+                    else{
+                        statement_rw = Cypher
+                                .match(subject_node)
+                                .with(subj);
+                    }
+                    break;
+                case "property":
+                    if(node_obj.isConcrete()){
+                        subject_node = subject_node.withProperties(uriValue, Cypher.literalOf(obj));
+                    }
+                    // Define order based on statement ranking
+                    if(statement_rw != null && statement_rww == null){
+                        statement_rww = statement_rw
+                                .match(subject_node)
+                                .where(subject_node.property(uriValue).isNotNull())
+                                .with(subj);
+                    }
+                    else if(statement_rww != null){
+                        statement_rww = statement_rw
+                                .match(subject_node)
+                                .where(subject_node.property(uriValue).isNotNull())
+                                .with(subj);
+                    }
+                    else{
+                        statement_rww = Cypher
+                                .match(subject_node)
+                                .where(subject_node.property(uriValue).isNotNull())
+                                .with(subj);
+                    }
+                    break;
+                default:
+                    System.out.println("######### Error in statement transform. Default case used. ##############");
 
-                matchStatements[i++] = StatementBuilder.transform(triple);
-                statementList.add(matchStatements[i - 1]);
             }
-
+            if(count == triples.size()) {
+                String[] varArgs = new String[varsToReturn.size()];
+                varArgs = varsToReturn.toArray(varArgs);
+                var final_statement = statement_rw.returning(varArgs).build();
+                statementList.add(final_statement);
+            }
+            count++;
         }
-
     }
+
+//    @Override
+//    public void visit(final OpUnion opUnion) {
+//        statementList.size();
+////        Statement temp_statement;
+////        Statement final_statement;
+////        Boolean buffer = false;
+////        for(Statement cs: statementList){
+////            if(!buffer) {
+////                temp_statement = cs;
+////                buffer = true;
+////            }
+////            else{
+////                final_statement = Cypher.union(temp_statement,cs);
+////                buffer = false;
+////            }
+////        }
+//    }
 
 }

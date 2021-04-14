@@ -1,2 +1,5 @@
 # Configuration values for sparql to cypher project
 DB_URL=/Users/<User>/Library/Application Support/com.Neo4j.Relate/Data/dbmss/dbms-<identifier>
+
+# For windows
+# DB_URL=C:\\Users\\<User>\\.Neo4jDesktop\\neo4jDatabases\\database-<identifier>\\installation-4.1.0

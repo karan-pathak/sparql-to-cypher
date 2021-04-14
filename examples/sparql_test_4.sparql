@@ -1,4 +1,5 @@
 select ?person ?movie
 where {
       ?person e:ACTED_IN ?movie .
+      ?person p:name "Madonna" .
 }
