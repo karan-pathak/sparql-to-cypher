@@ -2,9 +2,7 @@ package org.dbis.sparql.cypher;
 
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 
 import org.apache.jena.graph.Node;
 import org.apache.jena.graph.Triple;
@@ -30,6 +28,8 @@ import org.neo4j.cypherdsl.core.StatementBuilder;
 public class SparqlToCypherCompiler extends OpVisitorBase{
     List<Statement> statementList = new ArrayList<Statement>();
     List<String> varsToReturn = new ArrayList<>();
+//    List<String> aggregatedVars = new ArrayList<>();
+    HashSet<String> aggregatedVars = new HashSet<String>();
     // Referenced java doc: https://neo4j-contrib.github.io/cypher-dsl/current/project-info/apidocs/org/neo4j/cypherdsl/core/package-summary.html
     StatementBuilder.OrderableOngoingReadingAndWith statement_rw;
     StatementBuilder.OrderableOngoingReadingAndWithWithoutWhere statement_rww;
@@ -76,20 +76,29 @@ public class SparqlToCypherCompiler extends OpVisitorBase{
             switch(prefix){
                 case "edge":
                     var object_node = Cypher.anyNode(obj);
+                    if(!aggregatedVars.contains(subj)){
+                        aggregatedVars.add(subj);
+                    }
+                    if(!aggregatedVars.contains(obj)){
+                        aggregatedVars.add(obj);
+                    }
+//                    aggregatedVars.addAll(Arrays.asList(subj,obj));
+                    String[] aggArgsE = new String[aggregatedVars.size()];
+                    aggArgsE = aggregatedVars.toArray(aggArgsE);
                     if(statement_rw != null && statement_rww == null){
                         statement_rw = statement_rw
                                 .match(subject_node.relationshipTo(object_node, uriValue))
-                                .with(subj, obj);
+                                .with(aggArgsE);
                     }
                     else if(statement_rww != null){
                         statement_rww = statement_rww
                                 .match(subject_node.relationshipTo(object_node, uriValue))
-                                .with(subj, obj);
+                                .with(aggArgsE);
                     }
                     else{
                         statement_rw = Cypher
                                 .match(subject_node.relationshipTo(object_node, uriValue))
-                                .with(subj, obj);
+                                .with(aggArgsE);
                     }
                     break;
                 case "value":
@@ -114,24 +123,29 @@ public class SparqlToCypherCompiler extends OpVisitorBase{
                     if(node_obj.isConcrete()){
                         subject_node = subject_node.withProperties(uriValue, Cypher.literalOf(obj));
                     }
+                    if(!aggregatedVars.contains(subj)){
+                        aggregatedVars.add(subj);
+                    }
+                    String[] aggArgsP = new String[aggregatedVars.size()];
+                    aggArgsP = aggregatedVars.toArray(aggArgsP);
                     // Define order based on statement ranking
                     if(statement_rw != null && statement_rww == null){
                         statement_rww = statement_rw
                                 .match(subject_node)
                                 .where(subject_node.property(uriValue).isNotNull())
-                                .with(subj);
+                                .with(aggArgsP);
                     }
                     else if(statement_rww != null){
                         statement_rww = statement_rw
                                 .match(subject_node)
                                 .where(subject_node.property(uriValue).isNotNull())
-                                .with(subj);
+                                .with(aggArgsP);
                     }
                     else{
                         statement_rww = Cypher
                                 .match(subject_node)
                                 .where(subject_node.property(uriValue).isNotNull())
-                                .with(subj);
+                                .with(aggArgsP);
                     }
                     break;
                 default:
@@ -147,23 +161,5 @@ public class SparqlToCypherCompiler extends OpVisitorBase{
             count++;
         }
     }
-
-//    @Override
-//    public void visit(final OpUnion opUnion) {
-//        statementList.size();
-////        Statement temp_statement;
-////        Statement final_statement;
-////        Boolean buffer = false;
-////        for(Statement cs: statementList){
-////            if(!buffer) {
-////                temp_statement = cs;
-////                buffer = true;
-////            }
-////            else{
-////                final_statement = Cypher.union(temp_statement,cs);
-////                buffer = false;
-////            }
-////        }
-//    }
 
 }

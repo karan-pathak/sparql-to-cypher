@@ -1,0 +1,6 @@
+select ?person ?movie
+where {
+      ?person e:ACTED_IN ?movie .
+      ?person p:name "Tom Hanks" .
+      ?person e:DIRECTED ?movie .
+}
