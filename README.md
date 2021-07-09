@@ -1,4 +1,4 @@
-## SPARQL to CYPHER [Work In Progress]
+## SPARQL to CYPHER
 #### A library to convert sparql queries to cypher queries
 
 ### Requirements
@@ -13,3 +13,6 @@ Note: Neo4j version 4.1.0 and desktop version 1.3.4 were used at the time of wri
     * Click on `Open Folder` and select the folder path
 * Run the `ConsoleCompiler.java` file with arguments `-f <path-to-sparql-query-file>`. For instance `-f examples/sparql_test.sparql`
   
+
+### Note
+* Currently the library is limited to simple sparql select queries. It will soon be extended to more complex ones.
