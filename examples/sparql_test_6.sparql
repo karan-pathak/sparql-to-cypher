@@ -1,0 +1,7 @@
+select ?a
+where {
+      ?a e:ns1__follows ?b .
+      ?b e:ns1__likes ?c .
+      ?c e:ns4__hasReview ?d .
+      ?d e:ns4__reviewer ?e .
+}

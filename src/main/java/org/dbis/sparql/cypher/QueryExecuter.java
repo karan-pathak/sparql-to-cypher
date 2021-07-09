@@ -56,9 +56,12 @@ public class QueryExecuter {
             // end::columns[]
             columnsString = columns.toString();
             for(Statement cs: cypherStatements){
+                long startTime = System.currentTimeMillis();
                 resultString = tx.execute(cypherRenderer.render(cs)).resultAsString();
-                System.out.println(resultString);
+//                System.out.println(resultString);
                 System.out.println("The resulting cypher code is : "+cypherRenderer.render(cs));
+                long endTime = System.currentTimeMillis();
+                System.out.println("Time taken to execute Cypher with neo4j embedded : " + (endTime - startTime) + " miliseconds");
             }
         }
 
